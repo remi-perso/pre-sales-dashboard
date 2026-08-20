@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model AeSegmentMapping {
+  id        String   @id @default(uuid()) @db.Uuid
+  aeName    String   @map("ae_name") @db.VarChar(160)
+  aeNameKey String   @unique(map: "ae_segment_mappings_ae_name_key_key") @map("ae_name_key") @db.VarChar(160)
+  segment   String   @db.VarChar(120)
+  changedBy String   @map("changed_by") @db.VarChar(120)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  auditEntries AeSegmentMappingAudit[]
+
+  @@map("ae_segment_mappings")
+}
+
+model AeSegmentMappingAudit {
+  id          String   @id @default(uuid()) @db.Uuid
+  mappingId   String   @map("mapping_id") @db.Uuid
+  aeName      String   @map("ae_name") @db.VarChar(160)
+  fromSegment String?  @map("from_segment") @db.VarChar(120)
+  toSegment   String   @map("to_segment") @db.VarChar(120)
+  reason      String?  @db.VarChar(500)
+  changedBy   String   @map("changed_by") @db.VarChar(120)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  mapping AeSegmentMapping @relation(fields: [mappingId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([mappingId, createdAt(sort: Desc)], map: "ae_mapping_audit_mapping_created_at_idx")
+  @@map("ae_segment_mapping_audit")
+}
+
+model CategoryOverride {
+  id              String   @id @default(uuid()) @db.Uuid
+  opportunityId   String   @map("opportunity_id") @db.VarChar(18)
+  opportunityName String   @map("opportunity_name") @db.VarChar(255)
+  fromCategory    String   @map("from_category") @db.VarChar(80)
+  toCategory      String   @map("to_category") @db.VarChar(80)
+  reason          String   @db.VarChar(1000)
+  changedBy       String   @map("changed_by") @db.VarChar(120)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  selectedAsCurrent CategoryOverrideCurrent?
+
+  @@index([opportunityId, createdAt(sort: Desc)], map: "category_overrides_opportunity_created_at_idx")
+  @@map("category_overrides")
+}
+
+/// A single mutable pointer identifies the effective override. The referenced
+/// CategoryOverride rows remain immutable and form the complete audit trail.
+model CategoryOverrideCurrent {
+  opportunityId String   @id @map("opportunity_id") @db.VarChar(18)
+  overrideId    String   @unique(map: "category_override_current_override_id_key") @map("override_id") @db.Uuid
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  override CategoryOverride @relation(fields: [overrideId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@map("category_override_current")
+}

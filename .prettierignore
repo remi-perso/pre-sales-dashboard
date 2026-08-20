@@ -1,0 +1,6 @@
+AGENTS.md
+.next/
+coverage/
+node_modules/
+src/generated/
+package-lock.json
